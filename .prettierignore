@@ -1,0 +1,12 @@
+node_modules
+dist
+.expo
+coverage
+*.docx
+*.html
+package-lock.json
+
+# Pre-existing hand-authored project docs — not reformatting prose that
+# predates this tooling and wasn't written by it.
+CLAUDE.md
+docs/*.md
