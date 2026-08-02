@@ -40,10 +40,41 @@ done on your behalf — they touch shared/billed systems and need your login.
 - Supabase Auth configured: email/password (already on by default) and
   public self-signup disabled (`disable_signup: true`) — roles are
   admin-invited only, verified empirically
-- Seed script (`npm run seed`) and RLS test suite (`npm run test:rls`, 40
-  tests / 14 suites) — both run against the real `dev` project, not a mock
+- Seed script (`npm run seed`) — runs against the real `dev` project, not a mock
 - WatermelonDB sync spike done — see `docs/WATERMELONDB_SPIKE.md` for the
   go/no-go decision and what still needs a real device to finish verifying
+
+## Done since (Phase 2)
+
+- State machines enforced at the DB level (Backend System Design Section C):
+  `pathway_requests`/`graduation_requests` status is derived from the
+  approval columns by trigger (never client-trusted), the graduation
+  sequential CHECK (`sm_at` requires `builder_at`, `lp_at` requires `sm_at`)
+  is live, `daily_checklists` normalizes `submitted`→`pending_review` and
+  `needs_redo`→`draft`, and `needs_redo` without a `rejection_reason` is a
+  hard DB error
+- Test retake logic (`module_progress`): cooldown + rewatch gating, 3-strikes
+  Builder alert — all in `record-test-attempt`, an Edge Function, since
+  grading fields are now locked out of direct client writes by a guard
+  trigger (found and fixed a real clock-skew bug here: `rewatched_at` is
+  now always server-stamped, never client-supplied — see migration
+  `20260802185900`)
+- 48-hour unreviewed-checklist escalation: `pg_cron` job + `plpgsql`
+  function, verified by manufacturing an overdue fixture and confirming
+  the notification fires (and doesn't duplicate on a second run)
+- Builder capacity soft-cap check (warns at >12, never blocks) and the
+  `reassign-builder` Edge Function (preserves full history — Section F2)
+- Zod schemas for every Edge Function in/out, in `packages/shared-types`
+- Three Edge Functions deployed: `create-pathway-request`,
+  `reassign-builder`, `record-test-attempt`
+- `npm run test:integration`: 77 tests across `rls.test.mjs` (40),
+  `state-machines.test.mjs` (17), `edge-functions.test.mjs` (20) — all
+  against the real `dev` project. **Note:** this sandbox's network
+  occasionally drops the first request of a burst of back-to-back `node`
+  processes (a `withRetry` helper in `supabase/tests/helpers.mjs` covers
+  most of it); if `test:integration` fails with `AuthRetryableFetchError`/
+  `fetch failed`, just re-run it — every suite passes cleanly standalone
+  every time this was checked. This is environmental, not a code issue.
 
 ## Still needs you (in order)
 

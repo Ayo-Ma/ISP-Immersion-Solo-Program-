@@ -45,8 +45,29 @@ export const adminClient = createClient(SUPABASE_URL, SECRET_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
+// This sandbox's network occasionally drops the first request of a test
+// run with a transient fetch failure (seen repeatedly against both the
+// Auth API and the Management API, always transient, always succeeds on
+// retry) — retrying a couple of times here means a real, reproducible
+// failure still surfaces immediately, instead of every test file needing
+// a human to notice "fetch failed" and re-run it by hand.
+async function withRetry(fn, attempts = 5) {
+  let lastError;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (i < attempts - 1) await new Promise((r) => setTimeout(r, 1000 * (i + 1)));
+    }
+  }
+  throw lastError;
+}
+
 export async function loadSeedUserIds() {
-  const { data, error } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
+  const { data, error } = await withRetry(() =>
+    adminClient.auth.admin.listUsers({ perPage: 1000 }),
+  );
   if (error) throw error;
 
   const ids = {};
@@ -70,10 +91,12 @@ export async function signInAs(key) {
   const client = createClient(SUPABASE_URL, PUBLISHABLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
-  const { error } = await client.auth.signInWithPassword({
-    email: emailFor(key),
-    password: SEED_PASSWORD,
-  });
+  const { error } = await withRetry(() =>
+    client.auth.signInWithPassword({
+      email: emailFor(key),
+      password: SEED_PASSWORD,
+    }),
+  );
   if (error) throw new Error(`Sign-in failed for ${key}: ${error.message}`);
   return client;
 }

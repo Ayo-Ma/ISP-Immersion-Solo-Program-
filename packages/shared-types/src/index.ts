@@ -32,3 +32,85 @@ export type UserRole = z.infer<typeof userRoleSchema>;
  */
 export const userStatusSchema = z.enum(['active', 'inactive', 'withdrawn']);
 export type UserStatus = z.infer<typeof userStatusSchema>;
+
+/**
+ * Phase 2: Core Domain Logic. One input/output schema pair per Edge
+ * Function (MVP Dev Roadmap, Phase 2 checklist: "Zod schemas for every
+ * Edge Function input/output, shared with frontend via
+ * packages/shared-types"). Status enums here mirror the Postgres enums in
+ * supabase/migrations/20260802165300_enums.sql — the two must be kept in
+ * sync by hand, there's no code generation between them.
+ */
+
+export const pathwayRequestStatusSchema = z.enum([
+  'requested',
+  'under_review',
+  'approved',
+  'rejected',
+]);
+export type PathwayRequestStatus = z.infer<typeof pathwayRequestStatusSchema>;
+
+export const graduationRequestStatusSchema = z.enum([
+  'eligible',
+  'builder_recommended',
+  'sm_reviewed',
+  'rejected_by_sm',
+  'lp_approved',
+  'graduated',
+  'rejected_by_lp',
+]);
+export type GraduationRequestStatus = z.infer<typeof graduationRequestStatusSchema>;
+
+export const moduleProgressStatusSchema = z.enum([
+  'not_started',
+  'in_progress',
+  'passed',
+  'failed',
+]);
+export type ModuleProgressStatus = z.infer<typeof moduleProgressStatusSchema>;
+
+// ---- create-pathway-request -----------------------------------------
+
+export const createPathwayRequestInputSchema = z.object({
+  pathwayId: uuidSchema,
+});
+export type CreatePathwayRequestInput = z.infer<typeof createPathwayRequestInputSchema>;
+
+export const createPathwayRequestOutputSchema = z.object({
+  pathwayRequestId: uuidSchema,
+  status: pathwayRequestStatusSchema,
+});
+export type CreatePathwayRequestOutput = z.infer<typeof createPathwayRequestOutputSchema>;
+
+// ---- reassign-builder --------------------------------------------------
+
+export const reassignBuilderInputSchema = z.object({
+  discipleId: uuidSchema,
+  newBuilderId: uuidSchema,
+  reason: z.string().min(1, 'reason is required — Section F2 preserves it on the ended pairing'),
+});
+export type ReassignBuilderInput = z.infer<typeof reassignBuilderInputSchema>;
+
+export const reassignBuilderOutputSchema = z.object({
+  newPairingId: uuidSchema,
+  newBuilderActiveDiscipleCount: z.number().int().nonnegative(),
+  builderExceedsCapacitySoftCap: z.boolean(),
+});
+export type ReassignBuilderOutput = z.infer<typeof reassignBuilderOutputSchema>;
+
+// ---- record-test-attempt -----------------------------------------------
+
+export const recordTestAttemptInputSchema = z.object({
+  moduleProgressId: uuidSchema,
+  score: z.number().min(0).max(100),
+});
+export type RecordTestAttemptInput = z.infer<typeof recordTestAttemptInputSchema>;
+
+export const recordTestAttemptOutputSchema = z.object({
+  status: z.enum(['passed', 'failed']),
+  attempts: z.number().int().positive(),
+  rewatchRequired: z.boolean(),
+  cooldownUntil: z.string().datetime().nullable(),
+  builderAlerted: z.boolean(),
+});
+export type RecordTestAttemptOutput = z.infer<typeof recordTestAttemptOutputSchema>;

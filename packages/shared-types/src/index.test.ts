@@ -1,4 +1,11 @@
-import { userRoleSchema, userStatusSchema, uuidSchema } from './index';
+import {
+  createPathwayRequestInputSchema,
+  recordTestAttemptInputSchema,
+  reassignBuilderInputSchema,
+  userRoleSchema,
+  userStatusSchema,
+  uuidSchema,
+} from './index';
 
 describe('uuidSchema', () => {
   it('accepts a valid UUID', () => {
@@ -35,5 +42,64 @@ describe('userStatusSchema', () => {
 
   it('rejects "deleted" — this project never hard-deletes users', () => {
     expect(userStatusSchema.safeParse('deleted').success).toBe(false);
+  });
+});
+
+describe('createPathwayRequestInputSchema', () => {
+  it('accepts a valid pathwayId', () => {
+    expect(
+      createPathwayRequestInputSchema.safeParse({
+        pathwayId: '123e4567-e89b-12d3-a456-426614174000',
+      }).success,
+    ).toBe(true);
+  });
+
+  it('rejects a missing pathwayId', () => {
+    expect(createPathwayRequestInputSchema.safeParse({}).success).toBe(false);
+  });
+});
+
+describe('reassignBuilderInputSchema', () => {
+  const valid = {
+    discipleId: '123e4567-e89b-12d3-a456-426614174000',
+    newBuilderId: '223e4567-e89b-12d3-a456-426614174000',
+    reason: 'Builder relocating',
+  };
+
+  it('accepts a fully-populated request', () => {
+    expect(reassignBuilderInputSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it('rejects an empty reason — Section F2 requires it on the ended pairing', () => {
+    expect(reassignBuilderInputSchema.safeParse({ ...valid, reason: '' }).success).toBe(false);
+  });
+});
+
+describe('recordTestAttemptInputSchema', () => {
+  it('accepts a score within 0-100', () => {
+    expect(
+      recordTestAttemptInputSchema.safeParse({
+        moduleProgressId: '123e4567-e89b-12d3-a456-426614174000',
+        score: 65,
+      }).success,
+    ).toBe(true);
+  });
+
+  it('rejects a score above 100', () => {
+    expect(
+      recordTestAttemptInputSchema.safeParse({
+        moduleProgressId: '123e4567-e89b-12d3-a456-426614174000',
+        score: 101,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects a negative score', () => {
+    expect(
+      recordTestAttemptInputSchema.safeParse({
+        moduleProgressId: '123e4567-e89b-12d3-a456-426614174000',
+        score: -1,
+      }).success,
+    ).toBe(false);
   });
 });

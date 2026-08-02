@@ -15,7 +15,7 @@ import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { createClient } from '@supabase/supabase-js';
-import { signInAs } from './helpers.mjs';
+import { adminClient, signInAs } from './helpers.mjs';
 import { setupFixtures, teardownFixtures } from './fixtures.mjs';
 
 let fx;
@@ -37,6 +37,7 @@ before(async () => {
 });
 
 after(async () => {
+  if (!fx) return; // setupFixtures() itself failed — nothing was created to tear down
   await teardownFixtures(fx);
 });
 
@@ -126,11 +127,19 @@ describe('builder_disciple', () => {
     assert.ok(!data.some((r) => r.disciple_id === fx.userIds.disciple_4));
   });
 
-  it('supervising minister and lead pastor see all 6 pairings', async () => {
+  it('supervising minister and lead pastor see every pairing, including ended ones (audit trail)', async () => {
+    // Not a fixed count: Phase 2's reassign-builder never deletes rows
+    // (Section F2 — history is preserved), so the true total only grows
+    // as real reassignments happen. Assert "SM/LP see the actual total",
+    // not a number that goes stale the moment a reassignment ever runs.
+    const { count: actualTotal } = await adminClient
+      .from('builder_disciple')
+      .select('id', { count: 'exact', head: true });
+
     const sm = await clients.supervising_minister.from('builder_disciple').select('id');
     const lp = await clients.lead_pastor.from('builder_disciple').select('id');
-    assert.equal(sm.data.length, 6);
-    assert.equal(lp.data.length, 6);
+    assert.equal(sm.data.length, actualTotal);
+    assert.equal(lp.data.length, actualTotal);
   });
 });
 
@@ -229,7 +238,7 @@ describe('enrollments', () => {
 });
 
 describe('module_progress', () => {
-  it('the disciple sees and can update their own progress', async () => {
+  it('the disciple sees their own progress and can clock in (Phase 2 locks status/test_score/attempts to the record-test-attempt Edge Function, not raw client writes)', async () => {
     const { data: seen, error: selErr } = await clients.disciple_1
       .from('module_progress')
       .select('id');
@@ -238,7 +247,7 @@ describe('module_progress', () => {
 
     const { data: updated, error: updErr } = await clients.disciple_1
       .from('module_progress')
-      .update({ status: 'in_progress' })
+      .update({ clock_in_at: new Date().toISOString() })
       .eq('id', fx.moduleProgressId)
       .select();
     assert.equal(updErr, null);
