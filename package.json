@@ -12,10 +12,13 @@
     "format:check": "prettier --check .",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
+    "seed": "node --env-file=.env supabase/seed/seed.mjs",
+    "test:rls": "node --env-file=.env --test supabase/tests/",
     "prepare": "husky"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
+    "@supabase/supabase-js": "^2.111.0",
     "eslint": "^9.17.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-react": "^7.37.2",

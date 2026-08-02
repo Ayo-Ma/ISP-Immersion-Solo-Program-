@@ -3,14 +3,21 @@
   "version": "0.1.0",
   "main": "index.ts",
   "dependencies": {
+    "@nozbe/watermelondb": "^0.28.0",
+    "@react-native-async-storage/async-storage": "2.2.0",
     "@sentry/react-native": "~7.11.0",
+    "@supabase/supabase-js": "^2.111.0",
     "expo": "~57.0.9",
+    "expo-build-properties": "~57.0.8",
+    "expo-dev-client": "^57.0.10",
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",
-    "react-native": "0.86.2"
+    "react-native": "0.86.2",
+    "react-native-url-polyfill": "^4.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.26.0",
+    "@morrowdigital/watermelondb-expo-plugin": "^2.3.3",
     "@testing-library/react-native": "^14.0.1",
     "@types/jest": "^29.5.14",
     "@types/react": "~19.2.2",

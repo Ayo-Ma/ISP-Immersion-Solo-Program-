@@ -21,6 +21,21 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": ["@sentry/react-native/expo", "@sentry/react-native"]
+    "plugins": [
+      "@sentry/react-native/expo",
+      "@sentry/react-native",
+      "@morrowdigital/watermelondb-expo-plugin",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "1.6.10",
+            "packagingOptions": {
+              "pickFirst": ["**/libc++_shared.so"]
+            }
+          }
+        }
+      ]
+    ]
   }
 }

@@ -38,6 +38,15 @@ module.exports = tseslint.config(
     },
   },
   {
+    // Node scripts (seed script, RLS/sync spike test suites) — run
+    // directly via `node`, not bundled through any workspace's build.
+    files: ['supabase/seed/**/*.mjs', 'supabase/tests/**/*.mjs'],
+    languageOptions: {
+      sourceType: 'module',
+      globals: globals.node,
+    },
+  },
+  {
     files: ['apps/mobile/**/*.{ts,tsx}'],
     plugins: { react: reactPlugin, 'react-hooks': reactHooks },
     rules: {
