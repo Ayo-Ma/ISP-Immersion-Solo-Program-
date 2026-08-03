@@ -47,6 +47,15 @@ module.exports = tseslint.config(
     },
   },
   {
+    // Jest setup files run in Node before the RN/jsdom test environment
+    // is installed — same globals need as the config files above.
+    files: ['**/jest.setup.js'],
+    languageOptions: {
+      sourceType: 'commonjs',
+      globals: globals.node,
+    },
+  },
+  {
     files: ['apps/mobile/**/*.{ts,tsx}'],
     plugins: { react: reactPlugin, 'react-hooks': reactHooks },
     rules: {
