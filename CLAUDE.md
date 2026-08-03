@@ -79,6 +79,7 @@ Also read these files the selection imports:
 
 Implement: `ISP Mobile Prototype.dc.html`
 
+
 **IMPORTANT — this is a web-rendered design reference (HTML/CSS/JS).** The
 build target is React Native/Expo, not web. Translate all tokens, layout,
 and component patterns into React Native/Expo idioms — do not copy HTML/CSS
@@ -118,6 +119,23 @@ if a re-import is ever requested rather than doing it silently.
    manually-exported fallback references only. The live MCP import (Phase 3
    section below) is the primary, authoritative method — use these manual
    exports only if the MCP import fails or is unavailable.
+
+
+## Database Portability Rule (Non-Negotiable)
+
+Every database schema change, RLS policy, and table modification MUST be
+written as a versioned .sql migration file in /supabase/migrations —
+never made by clicking around in the Supabase dashboard UI.
+
+Why: Supabase's database is just Postgres. As long as the schema and RLS
+policies exist as real, versioned SQL files, they can be migrated to any
+other Postgres host (e.g. Neon) in an afternoon if ever needed. If changes
+are made only through the dashboard instead, that portability is lost
+silently, and the schema becomes locked to Supabase specifically.
+
+This applies to every table, every RLS policy, every enum, every index —
+no exceptions, even for "quick" changes during active development.
+
 
 ## First Action
 Read all files above, in order, before writing any code. Confirm your
