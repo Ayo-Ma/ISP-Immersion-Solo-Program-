@@ -4,6 +4,7 @@ import type { UserRole } from '@isp-app/shared-types';
 import { useTheme } from '../theme';
 import { HomeScreen } from '../screens/HomeScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
+import { DiscipleNavigator } from './DiscipleNavigator';
 
 export type RoleTabParamList = {
   Home: undefined;
@@ -48,7 +49,7 @@ export function RoleTabs({ role }: { role: UserRole }) {
       }}
     >
       <Tab.Screen name="Home" options={{ title: ROLE_LABEL[role] }}>
-        {() => <HomeScreen role={role} />}
+        {() => (role === 'disciple' ? <DiscipleNavigator /> : <HomeScreen role={role} />)}
       </Tab.Screen>
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>

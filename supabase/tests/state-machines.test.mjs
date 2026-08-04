@@ -124,7 +124,11 @@ describe('graduation_requests sequential enforcement + status derivation', () =>
   });
 
   after(async () => {
+    // The enrollment→module_progress cascade trigger (Phase 4) auto-creates
+    // rows for this enrollment too — clear them before deleting the
+    // enrollment (module_progress.enrollment_id is ON DELETE RESTRICT).
     await adminClient.from('graduation_requests').delete().eq('id', graduationRequestId);
+    await adminClient.from('module_progress').delete().eq('enrollment_id', enrollmentId);
     await adminClient.from('enrollments').delete().eq('id', enrollmentId);
   });
 
@@ -208,6 +212,7 @@ describe('graduation_requests rejection derivation + rejected_by', () => {
 
   after(async () => {
     await adminClient.from('graduation_requests').delete().eq('id', graduationRequestId);
+    await adminClient.from('module_progress').delete().eq('enrollment_id', enrollmentId);
     await adminClient.from('enrollments').delete().eq('id', enrollmentId);
   });
 
@@ -292,16 +297,24 @@ describe('module_progress grading-column guard', () => {
       .limit(1);
     moduleId = modules[0].id;
 
-    const { data: progress } = await adminClient
+    // The enrollment→module_progress cascade trigger (Phase 4) already
+    // inserted one row per pathway module for this enrollment — fetch the
+    // one for moduleId rather than inserting a duplicate.
+    const { data: progress, error: progressError } = await adminClient
       .from('module_progress')
-      .insert({ enrollment_id: enrollmentId, module_id: moduleId })
       .select('id')
+      .eq('enrollment_id', enrollmentId)
+      .eq('module_id', moduleId)
       .single();
+    if (progressError) throw progressError;
     moduleProgressId = progress.id;
   });
 
   after(async () => {
-    await adminClient.from('module_progress').delete().eq('id', moduleProgressId);
+    // Delete all cascade-created rows for this enrollment, not just
+    // moduleProgressId, or leftover rows block the enrollment delete below
+    // (module_progress.enrollment_id is ON DELETE RESTRICT).
+    await adminClient.from('module_progress').delete().eq('enrollment_id', enrollmentId);
     await adminClient.from('enrollments').delete().eq('id', enrollmentId);
   });
 

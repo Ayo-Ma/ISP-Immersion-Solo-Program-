@@ -29,7 +29,12 @@ async function deleteFixtures(ids) {
   // Delete order matters: children before parents (FKs are ON DELETE
   // RESTRICT throughout, per Section E).
   await adminClient.from('graduation_requests').delete().eq('id', ids.graduationRequestId);
-  await adminClient.from('module_progress').delete().eq('id', ids.moduleProgressId);
+  // The enrollment→module_progress cascade trigger (Phase 4) auto-creates
+  // one row per pathway module on enrollment insert — delete all of them
+  // by enrollment_id, not just the single row this fixture originally
+  // inserted itself, or the leftover rows block the enrollment delete
+  // below (module_progress.enrollment_id is ON DELETE RESTRICT).
+  await adminClient.from('module_progress').delete().eq('enrollment_id', ids.enrollmentId);
   await adminClient.from('enrollments').delete().eq('id', ids.enrollmentId);
   await adminClient.from('pathway_requests').delete().eq('id', ids.pathwayRequestId);
   await adminClient.from('daily_checklists').delete().eq('id', ids.dailyChecklistId);
@@ -61,6 +66,29 @@ export async function setupFixtures() {
     .delete()
     .eq('primary_user_id', userIds.supervising_minister)
     .eq('reason', 'RLS test fixture');
+  // A crashed prior run can leave an orphaned enrollment behind (only one
+  // active enrollment per disciple is allowed — enrollments_one_active_per_
+  // disciple — so a leftover one blocks this run's insert below). Delete
+  // its FK-dependent children first (RESTRICT throughout), then it, then
+  // any orphaned pathway_request for the same disciple/pathway.
+  const stalePathwayRequests = await adminClient
+    .from('pathway_requests')
+    .select('id')
+    .eq('disciple_id', userIds.disciple_1)
+    .eq('pathway_id', pathwayId);
+  const staleEnrollments = await adminClient
+    .from('enrollments')
+    .select('id')
+    .eq('disciple_id', userIds.disciple_1)
+    .eq('pathway_id', pathwayId);
+  for (const { id: staleEnrollmentId } of staleEnrollments.data ?? []) {
+    await adminClient.from('graduation_requests').delete().eq('enrollment_id', staleEnrollmentId);
+    await adminClient.from('module_progress').delete().eq('enrollment_id', staleEnrollmentId);
+    await adminClient.from('enrollments').delete().eq('id', staleEnrollmentId);
+  }
+  for (const { id: stalePathwayRequestId } of stalePathwayRequests.data ?? []) {
+    await adminClient.from('pathway_requests').delete().eq('id', stalePathwayRequestId);
+  }
 
   const pathwayRequest = await adminClient
     .from('pathway_requests')
@@ -69,17 +97,48 @@ export async function setupFixtures() {
     .single();
   if (pathwayRequest.error) throw pathwayRequest.error;
 
+  // Approve the request (as admin, bypassing the column-ownership guard,
+  // which only fires for an authenticated sm/lead_pastor JWT) rather than
+  // inserting an enrollment directly — Phase 4's
+  // apply_pathway_approval_to_enrollment trigger is what creates it in
+  // real usage, and a manually-inserted enrollment alongside a
+  // still-pending pathway_request no longer reflects reachable production
+  // state now that approval owns enrollment creation. The pathway_requests
+  // describe block below re-writes these same columns to test the
+  // per-approver guard; re-setting an already-approved value is a no-op
+  // for the status trigger (old.status is already 'approved'), so it
+  // won't try to insert a second enrollment.
+  const approval = await adminClient
+    .from('pathway_requests')
+    .update({
+      sm_approved_at: new Date().toISOString(),
+      lp_approved_at: new Date().toISOString(),
+    })
+    .eq('id', pathwayRequest.data.id);
+  if (approval.error) throw approval.error;
+
   const enrollment = await adminClient
     .from('enrollments')
-    .insert({ disciple_id: userIds.disciple_1, pathway_id: pathwayId })
     .select('id')
+    .eq('disciple_id', userIds.disciple_1)
+    .eq('pathway_id', pathwayId)
     .single();
   if (enrollment.error) throw enrollment.error;
 
+  // The enrollment→module_progress cascade trigger (Phase 4) already
+  // inserted one row per pathway module for this enrollment — fetch the
+  // one for the first module rather than inserting a duplicate.
+  const moduleProgressRows = await adminClient
+    .from('module_progress')
+    .select('id')
+    .eq('enrollment_id', enrollment.data.id)
+    .order('module_id');
+  if (moduleProgressRows.error) throw moduleProgressRows.error;
   const moduleProgress = await adminClient
     .from('module_progress')
-    .insert({ enrollment_id: enrollment.data.id, module_id: moduleIds[0] })
     .select('id')
+    .eq('enrollment_id', enrollment.data.id)
+    .eq('module_id', moduleIds[0])
     .single();
   if (moduleProgress.error) throw moduleProgress.error;
 
@@ -160,6 +219,7 @@ export async function setupFixtures() {
     pathwayRequestId: pathwayRequest.data.id,
     enrollmentId: enrollment.data.id,
     moduleProgressId: moduleProgress.data.id,
+    moduleProgressIds: moduleProgressRows.data.map((r) => r.id),
     graduationRequestId: graduationRequest.data.id,
     dailyChecklistId: dailyChecklist.data.id,
     chatMessageId: chatMessage.data.id,

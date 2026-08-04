@@ -243,7 +243,9 @@ describe('module_progress', () => {
       .from('module_progress')
       .select('id');
     assert.equal(selErr, null);
-    assert.deepEqual(ids(seen), [fx.moduleProgressId]);
+    // The enrollment→module_progress cascade trigger (Phase 4) creates one
+    // row per pathway module, not just the one fixtures.mjs points at.
+    assert.deepEqual(ids(seen), fx.moduleProgressIds.slice().sort());
 
     const { data: updated, error: updErr } = await clients.disciple_1
       .from('module_progress')
