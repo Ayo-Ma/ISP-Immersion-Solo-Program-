@@ -7,6 +7,8 @@ import type {
   ReviewChecklistOutput,
   SelectCheckinTimeInput,
   SelectCheckinTimeOutput,
+  ReassignBuilderInput,
+  ReassignBuilderOutput,
 } from '@isp-app/shared-types';
 
 import { supabase } from './supabase';
@@ -66,4 +68,8 @@ export function reviewChecklist(input: ReviewChecklistInput): Promise<ReviewChec
 
 export function selectCheckinTime(input: SelectCheckinTimeInput): Promise<SelectCheckinTimeOutput> {
   return callEdgeFunction('select-checkin-time', input);
+}
+
+export function reassignBuilder(input: ReassignBuilderInput): Promise<ReassignBuilderOutput> {
+  return callEdgeFunction('reassign-builder', input);
 }

@@ -6,6 +6,7 @@ import { HomeScreen } from '../screens/HomeScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { DiscipleNavigator } from './DiscipleNavigator';
 import { BuilderNavigator } from './BuilderNavigator';
+import { LeadershipNavigator } from './LeadershipNavigator';
 
 export type RoleTabParamList = {
   Home: undefined;
@@ -23,10 +24,10 @@ const ROLE_LABEL: Record<UserRole, string> = {
 
 /**
  * Home + Profile at the tab level; each role's actual information
- * architecture (Disciple's lesson/checklist/growth flow, Builder's roster
- * and per-disciple actions) lives inside that role's own stack navigator,
- * swapped in under the Home tab. Supervising Minister/Lead Pastor still
- * fall back to the plain HomeScreen shell — that's Phase 6 scope.
+ * architecture lives inside that role's own stack navigator, swapped in
+ * under the Home tab. Supervising Minister and Lead Pastor share
+ * LeadershipNavigator (Phase 6) — same two approval queues, different
+ * stage each role owns; see that navigator's own comment.
  *
  * Navigation chrome stays dark regardless of light/dark mode (design
  * system rule: TopNav/nav chrome is the one persistent brand anchor) —
@@ -53,6 +54,9 @@ export function RoleTabs({ role }: { role: UserRole }) {
         {() => {
           if (role === 'disciple') return <DiscipleNavigator />;
           if (role === 'builder') return <BuilderNavigator />;
+          if (role === 'supervising_minister' || role === 'lead_pastor') {
+            return <LeadershipNavigator />;
+          }
           return <HomeScreen role={role} />;
         }}
       </Tab.Screen>
