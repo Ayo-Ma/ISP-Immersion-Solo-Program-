@@ -21,3 +21,19 @@ export const recordTestAttemptInputSchema = z.object({
   moduleProgressId: z.string().uuid(),
   score: z.number().min(0).max(100),
 });
+
+export const reviewChecklistInputSchema = z
+  .object({
+    checklistId: z.string().uuid(),
+    decision: z.enum(['approved', 'needs_redo']),
+    rejectionReason: z.string().min(1).optional(),
+  })
+  .refine((v) => v.decision !== 'needs_redo' || !!v.rejectionReason, {
+    message: 'rejectionReason is required when decision is needs_redo (PRD Section C.3).',
+    path: ['rejectionReason'],
+  });
+
+export const selectCheckinTimeInputSchema = z.object({
+  weeklyCheckinId: z.string().uuid(),
+  chosenTime: z.string().datetime(),
+});

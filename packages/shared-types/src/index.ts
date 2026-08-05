@@ -69,6 +69,23 @@ export const moduleProgressStatusSchema = z.enum([
 ]);
 export type ModuleProgressStatus = z.infer<typeof moduleProgressStatusSchema>;
 
+export const checklistStatusSchema = z.enum([
+  'draft',
+  'submitted',
+  'pending_review',
+  'approved',
+  'needs_redo',
+]);
+export type ChecklistStatus = z.infer<typeof checklistStatusSchema>;
+
+export const weeklyCheckinStatusSchema = z.enum([
+  'proposed',
+  'scheduled',
+  'completed',
+  'cancelled',
+]);
+export type WeeklyCheckinStatus = z.infer<typeof weeklyCheckinStatusSchema>;
+
 // ---- create-pathway-request -----------------------------------------
 
 export const createPathwayRequestInputSchema = z.object({
@@ -114,3 +131,38 @@ export const recordTestAttemptOutputSchema = z.object({
   builderAlerted: z.boolean(),
 });
 export type RecordTestAttemptOutput = z.infer<typeof recordTestAttemptOutputSchema>;
+
+// ---- review-checklist ----------------------------------------------------
+
+export const reviewChecklistInputSchema = z
+  .object({
+    checklistId: uuidSchema,
+    decision: z.enum(['approved', 'needs_redo']),
+    rejectionReason: z.string().min(1).optional(),
+  })
+  .refine((v) => v.decision !== 'needs_redo' || !!v.rejectionReason, {
+    message: 'rejectionReason is required when decision is needs_redo (PRD Section C.3).',
+    path: ['rejectionReason'],
+  });
+export type ReviewChecklistInput = z.infer<typeof reviewChecklistInputSchema>;
+
+export const reviewChecklistOutputSchema = z.object({
+  checklistId: uuidSchema,
+  status: checklistStatusSchema,
+});
+export type ReviewChecklistOutput = z.infer<typeof reviewChecklistOutputSchema>;
+
+// ---- select-checkin-time -------------------------------------------------
+
+export const selectCheckinTimeInputSchema = z.object({
+  weeklyCheckinId: uuidSchema,
+  chosenTime: z.string().datetime(),
+});
+export type SelectCheckinTimeInput = z.infer<typeof selectCheckinTimeInputSchema>;
+
+export const selectCheckinTimeOutputSchema = z.object({
+  weeklyCheckinId: uuidSchema,
+  status: weeklyCheckinStatusSchema,
+  scheduledAt: z.string().datetime(),
+});
+export type SelectCheckinTimeOutput = z.infer<typeof selectCheckinTimeOutputSchema>;

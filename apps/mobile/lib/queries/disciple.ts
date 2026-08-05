@@ -231,3 +231,24 @@ export async function listGrowthStages(): Promise<GrowthProgressRow['growth_stag
   if (error) throw error;
   return data;
 }
+
+export interface WeeklyCheckinRow {
+  id: string;
+  scheduled_at: string | null;
+  meet_link: string | null;
+  status: 'proposed' | 'scheduled' | 'completed' | 'cancelled';
+  proposed_times: string[] | null;
+}
+
+/** The most recent check-in still needing disciple/Builder action (proposed or scheduled), if any. */
+export async function getMyActiveWeeklyCheckin(): Promise<WeeklyCheckinRow | null> {
+  const { data, error } = await supabase
+    .from('weekly_checkins')
+    .select('id, scheduled_at, meet_link, status, proposed_times')
+    .in('status', ['proposed', 'scheduled'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}

@@ -19,6 +19,7 @@ import { LessonScreen } from '../screens/disciple/LessonScreen';
 import { TestScreen } from '../screens/disciple/TestScreen';
 import { ChecklistScreen } from '../screens/disciple/ChecklistScreen';
 import { GrowthScreen } from '../screens/disciple/GrowthScreen';
+import { WeeklyCheckinScreen } from '../screens/disciple/WeeklyCheckinScreen';
 
 export type DiscipleStackParamList = {
   Dashboard: undefined;
@@ -26,6 +27,7 @@ export type DiscipleStackParamList = {
   Test: { moduleProgressId: string };
   Checklist: undefined;
   Growth: undefined;
+  Checkin: undefined;
 };
 
 export type DiscipleStackScreenProps<T extends keyof DiscipleStackParamList> =
@@ -87,6 +89,11 @@ export function DiscipleNavigator() {
       <Stack.Screen name="Test" component={TestScreen} options={{ title: 'Test' }} />
       <Stack.Screen name="Checklist" component={ChecklistScreen} options={{ title: 'Checklist' }} />
       <Stack.Screen name="Growth" component={GrowthScreen} options={{ title: 'Growth' }} />
+      <Stack.Screen
+        name="Checkin"
+        component={WeeklyCheckinScreen}
+        options={{ title: 'Weekly Check-in' }}
+      />
     </Stack.Navigator>
   );
 }

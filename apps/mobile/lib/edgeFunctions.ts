@@ -3,6 +3,10 @@ import type {
   CreatePathwayRequestOutput,
   RecordTestAttemptInput,
   RecordTestAttemptOutput,
+  ReviewChecklistInput,
+  ReviewChecklistOutput,
+  SelectCheckinTimeInput,
+  SelectCheckinTimeOutput,
 } from '@isp-app/shared-types';
 
 import { supabase } from './supabase';
@@ -54,4 +58,12 @@ export function createPathwayRequest(
 
 export function recordTestAttempt(input: RecordTestAttemptInput): Promise<RecordTestAttemptOutput> {
   return callEdgeFunction('record-test-attempt', input);
+}
+
+export function reviewChecklist(input: ReviewChecklistInput): Promise<ReviewChecklistOutput> {
+  return callEdgeFunction('review-checklist', input);
+}
+
+export function selectCheckinTime(input: SelectCheckinTimeInput): Promise<SelectCheckinTimeOutput> {
+  return callEdgeFunction('select-checkin-time', input);
 }

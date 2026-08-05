@@ -13,7 +13,7 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "seed": "node --env-file=.env supabase/seed/seed.mjs",
-    "test:integration": "node --env-file=.env --test supabase/tests/rls.test.mjs && node --env-file=.env --test supabase/tests/state-machines.test.mjs && node --env-file=.env --test supabase/tests/edge-functions.test.mjs && node --env-file=.env --test supabase/tests/phase4-disciple-flow.test.mjs",
+    "test:integration": "node --env-file=.env --test supabase/tests/rls.test.mjs && node --env-file=.env --test supabase/tests/state-machines.test.mjs && node --env-file=.env --test supabase/tests/edge-functions.test.mjs && node --env-file=.env --test supabase/tests/phase4-disciple-flow.test.mjs && node --env-file=.env --test supabase/tests/phase5-builder-flow.test.mjs",
     "prepare": "husky"
   },
   "devDependencies": {

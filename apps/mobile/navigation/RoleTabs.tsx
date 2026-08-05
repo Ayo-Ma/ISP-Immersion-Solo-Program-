@@ -5,6 +5,7 @@ import { useTheme } from '../theme';
 import { HomeScreen } from '../screens/HomeScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { DiscipleNavigator } from './DiscipleNavigator';
+import { BuilderNavigator } from './BuilderNavigator';
 
 export type RoleTabParamList = {
   Home: undefined;
@@ -21,11 +22,11 @@ const ROLE_LABEL: Record<UserRole, string> = {
 };
 
 /**
- * Deliberately minimal (Home + Profile) rather than a full per-role tab
- * tree — Phase 3's Gate is "a role-correct home screen with no feature
- * logic yet, just the shell." The real information architecture (Builder's
- * roster, Leadership's approval queues, etc.) is what Phases 4-6 are
- * explicitly tasked with designing, not something to presume here.
+ * Home + Profile at the tab level; each role's actual information
+ * architecture (Disciple's lesson/checklist/growth flow, Builder's roster
+ * and per-disciple actions) lives inside that role's own stack navigator,
+ * swapped in under the Home tab. Supervising Minister/Lead Pastor still
+ * fall back to the plain HomeScreen shell — that's Phase 6 scope.
  *
  * Navigation chrome stays dark regardless of light/dark mode (design
  * system rule: TopNav/nav chrome is the one persistent brand anchor) —
@@ -49,7 +50,11 @@ export function RoleTabs({ role }: { role: UserRole }) {
       }}
     >
       <Tab.Screen name="Home" options={{ title: ROLE_LABEL[role] }}>
-        {() => (role === 'disciple' ? <DiscipleNavigator /> : <HomeScreen role={role} />)}
+        {() => {
+          if (role === 'disciple') return <DiscipleNavigator />;
+          if (role === 'builder') return <BuilderNavigator />;
+          return <HomeScreen role={role} />;
+        }}
       </Tab.Screen>
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>

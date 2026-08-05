@@ -2,6 +2,8 @@ import {
   createPathwayRequestInputSchema,
   recordTestAttemptInputSchema,
   reassignBuilderInputSchema,
+  reviewChecklistInputSchema,
+  selectCheckinTimeInputSchema,
   userRoleSchema,
   userStatusSchema,
   uuidSchema,
@@ -99,6 +101,52 @@ describe('recordTestAttemptInputSchema', () => {
       recordTestAttemptInputSchema.safeParse({
         moduleProgressId: '123e4567-e89b-12d3-a456-426614174000',
         score: -1,
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe('reviewChecklistInputSchema', () => {
+  const checklistId = '123e4567-e89b-12d3-a456-426614174000';
+
+  it('accepts an approved decision with no reason', () => {
+    expect(
+      reviewChecklistInputSchema.safeParse({ checklistId, decision: 'approved' }).success,
+    ).toBe(true);
+  });
+
+  it('accepts needs_redo with a rejection reason', () => {
+    expect(
+      reviewChecklistInputSchema.safeParse({
+        checklistId,
+        decision: 'needs_redo',
+        rejectionReason: 'Prayer time not logged',
+      }).success,
+    ).toBe(true);
+  });
+
+  it('rejects needs_redo without a rejection reason (PRD Section C.3)', () => {
+    expect(
+      reviewChecklistInputSchema.safeParse({ checklistId, decision: 'needs_redo' }).success,
+    ).toBe(false);
+  });
+});
+
+describe('selectCheckinTimeInputSchema', () => {
+  it('accepts a valid weeklyCheckinId and ISO chosenTime', () => {
+    expect(
+      selectCheckinTimeInputSchema.safeParse({
+        weeklyCheckinId: '123e4567-e89b-12d3-a456-426614174000',
+        chosenTime: '2026-08-10T15:00:00.000Z',
+      }).success,
+    ).toBe(true);
+  });
+
+  it('rejects a non-ISO chosenTime', () => {
+    expect(
+      selectCheckinTimeInputSchema.safeParse({
+        weeklyCheckinId: '123e4567-e89b-12d3-a456-426614174000',
+        chosenTime: 'next tuesday',
       }).success,
     ).toBe(false);
   });
