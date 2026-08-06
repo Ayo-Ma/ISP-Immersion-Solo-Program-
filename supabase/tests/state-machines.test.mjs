@@ -40,7 +40,40 @@ describe('pathway_requests status derivation', () => {
   });
 
   after(async () => {
+    // Long-standing gap, only just surfaced: "becomes approved once BOTH
+    // approvers have signed" drives this row through the Phase 4
+    // apply_pathway_approval_to_enrollment cascade, which creates a REAL
+    // active enrollment for disciple_1 — never cleaned up here before,
+    // so a second run in the same session collides with
+    // enrollments_one_active_per_disciple. Clean up the cascade's
+    // children too (module_progress is ON DELETE RESTRICT on enrollments).
+    const { data: enrollment } = await adminClient
+      .from('enrollments')
+      .select('id')
+      .eq('disciple_id', userIds.disciple_1)
+      .eq('pathway_id', pathwayId)
+      .maybeSingle();
+    if (enrollment) {
+      await adminClient.from('module_progress').delete().eq('enrollment_id', enrollment.id);
+      await adminClient.from('enrollments').delete().eq('id', enrollment.id);
+    }
     await adminClient.from('pathway_requests').delete().eq('id', requestId);
+    // Phase 8's notify_pathway_request_events trigger fires on this
+    // describe block's own insert (LP/SM) and rejection (the disciple) —
+    // clean those up too, or they leak into rls.test.mjs's notifications
+    // RLS assertions for disciple_1 (a real interaction found by running
+    // the full pipeline, not by re-reading either file in isolation).
+    await adminClient
+      .from('notifications')
+      .delete()
+      .eq('event_type', 'pathway_request_created')
+      .contains('payload', { pathway_request_id: requestId });
+    await adminClient
+      .from('notifications')
+      .delete()
+      .eq('user_id', userIds.disciple_1)
+      .eq('event_type', 'pathway_request_rejected')
+      .contains('payload', { pathway_request_id: requestId });
   });
 
   it('starts as requested with neither approval set', async () => {
@@ -130,6 +163,13 @@ describe('graduation_requests sequential enforcement + status derivation', () =>
     await adminClient.from('graduation_requests').delete().eq('id', graduationRequestId);
     await adminClient.from('module_progress').delete().eq('enrollment_id', enrollmentId);
     await adminClient.from('enrollments').delete().eq('id', enrollmentId);
+    // Phase 8's notify_graduation_request_events trigger fires as this
+    // block advances builder_at -> sm_at -> lp_at.
+    await adminClient
+      .from('notifications')
+      .delete()
+      .eq('event_type', 'graduation_step_advanced')
+      .contains('payload', { graduation_request_id: graduationRequestId });
   });
 
   it('INVALID: sm_at cannot be set while builder_at is null (the exact CHECK named in the roadmap)', async () => {
@@ -214,6 +254,19 @@ describe('graduation_requests rejection derivation + rejected_by', () => {
     await adminClient.from('graduation_requests').delete().eq('id', graduationRequestId);
     await adminClient.from('module_progress').delete().eq('enrollment_id', enrollmentId);
     await adminClient.from('enrollments').delete().eq('id', enrollmentId);
+    // Phase 8's notify_graduation_request_events trigger fires both on
+    // this block's own insert (builder_at already set -> notifies SM) and
+    // on the rejection below (routes back to the assigned Builder).
+    await adminClient
+      .from('notifications')
+      .delete()
+      .eq('event_type', 'graduation_step_advanced')
+      .contains('payload', { graduation_request_id: graduationRequestId });
+    await adminClient
+      .from('notifications')
+      .delete()
+      .eq('event_type', 'graduation_request_rejected')
+      .contains('payload', { graduation_request_id: graduationRequestId });
   });
 
   it('a rejection while sm_at is still null derives to rejected_by_sm', async () => {
@@ -243,6 +296,13 @@ describe('daily_checklists normalization + mandatory rejection reason', () => {
 
   after(async () => {
     await adminClient.from('daily_checklists').delete().eq('id', checklistId);
+    // Phase 8's notify_checklist_submitted trigger fires on the
+    // submitted -> pending_review normalization below.
+    await adminClient
+      .from('notifications')
+      .delete()
+      .eq('event_type', 'checklist_submitted')
+      .contains('payload', { checklist_id: checklistId });
   });
 
   it('INVALID: needs_redo cannot be set without a rejection_reason', async () => {
@@ -316,6 +376,14 @@ describe('module_progress grading-column guard', () => {
     // (module_progress.enrollment_id is ON DELETE RESTRICT).
     await adminClient.from('module_progress').delete().eq('enrollment_id', enrollmentId);
     await adminClient.from('enrollments').delete().eq('id', enrollmentId);
+    // Phase 8's notify_module_completed trigger fires when the test below
+    // sets status='passed' — notifies the assigned Builder (realtime) and
+    // every LP/SM (digest).
+    await adminClient
+      .from('notifications')
+      .delete()
+      .eq('event_type', 'module_completed')
+      .contains('payload', { module_progress_id: moduleProgressId });
   });
 
   it("VALID (as service_role/admin): grading fields ARE writable — this is record-test-attempt's own write path", async () => {

@@ -56,11 +56,19 @@ async function cleanupDisciple2() {
     .eq('disciple_id', userIds.disciple_2)
     .eq('date', TODAY);
   await adminClient.from('weekly_checkins').delete().eq('disciple_id', userIds.disciple_2);
-  await adminClient
-    .from('notifications')
-    .delete()
-    .eq('user_id', userIds.disciple_2)
-    .eq('event_type', 'checklist_reviewed');
+  // Phase 8's notification triggers fire throughout this file's flow
+  // (checklist submit/review, graduation recommend, weekly check-in) —
+  // broad cleanup by recipient rather than tracking every payload id.
+  for (const key of [
+    'disciple_1',
+    'disciple_2',
+    'builder_1',
+    'builder_2',
+    'lead_pastor',
+    'supervising_minister',
+  ]) {
+    await adminClient.from('notifications').delete().eq('user_id', userIds[key]);
+  }
 }
 
 before(async () => {

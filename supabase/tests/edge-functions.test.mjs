@@ -60,7 +60,20 @@ before(async () => {
 
 describe('create-pathway-request', () => {
   after(async () => {
+    const { data: requests } = await adminClient
+      .from('pathway_requests')
+      .select('id')
+      .eq('disciple_id', userIds.disciple_6);
     await adminClient.from('pathway_requests').delete().eq('disciple_id', userIds.disciple_6);
+    // Phase 8's notify_pathway_request_events trigger fires LP/SM
+    // notifications on each successful insert above.
+    for (const { id } of requests ?? []) {
+      await adminClient
+        .from('notifications')
+        .delete()
+        .eq('event_type', 'pathway_request_created')
+        .contains('payload', { pathway_request_id: id });
+    }
   });
 
   it('INVALID: no Authorization header -> 401', async () => {
@@ -234,11 +247,21 @@ describe('record-test-attempt', () => {
     // (module_progress.enrollment_id is ON DELETE RESTRICT).
     await adminClient.from('module_progress').delete().eq('enrollment_id', enrollmentId);
     await adminClient.from('enrollments').delete().eq('id', enrollmentId);
-    await adminClient
-      .from('notifications')
-      .delete()
-      .eq('event_type', 'test_three_failures')
-      .contains('payload', { module_progress_id: moduleProgressId });
+    // Phase 8: every attempt now also fires test_passed/test_failed to
+    // disciple+Builder, and a pass fires module_completed to Builder
+    // (realtime) and every LP/SM (digest).
+    for (const eventType of [
+      'test_three_failures',
+      'test_passed',
+      'test_failed',
+      'module_completed',
+    ]) {
+      await adminClient
+        .from('notifications')
+        .delete()
+        .eq('event_type', eventType)
+        .contains('payload', { module_progress_id: moduleProgressId });
+    }
   });
 
   it('INVALID: a different disciple cannot submit an attempt for this module -> 403', async () => {

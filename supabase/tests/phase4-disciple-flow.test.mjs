@@ -62,6 +62,13 @@ before(async () => {
     .eq('disciple_id', userIds.disciple_3)
     .eq('date', new Date().toISOString().slice(0, 10));
   await adminClient.from('prayer_sessions').delete().eq('disciple_id', userIds.disciple_3);
+  // Phase 8's notification triggers fire throughout this file's flow
+  // (pathway request, checklist submit, test pass/fail, module complete)
+  // — broad cleanup by recipient, same pattern later phase test files use,
+  // rather than tracking every payload id this flow touches.
+  for (const key of ['disciple_3', 'builder_1', 'lead_pastor', 'supervising_minister']) {
+    await adminClient.from('notifications').delete().eq('user_id', userIds[key]);
+  }
 
   discipleClient = await signInAs('disciple_3');
   const {
@@ -88,6 +95,9 @@ after(async () => {
     .eq('disciple_id', userIds.disciple_3)
     .eq('date', new Date().toISOString().slice(0, 10));
   await adminClient.from('prayer_sessions').delete().eq('disciple_id', userIds.disciple_3);
+  for (const key of ['disciple_3', 'builder_1', 'lead_pastor', 'supervising_minister']) {
+    await adminClient.from('notifications').delete().eq('user_id', userIds[key]);
+  }
 });
 
 describe('Registration -> pathway status (RegistrationScreen / PathwayStatusScreen data layer)', () => {

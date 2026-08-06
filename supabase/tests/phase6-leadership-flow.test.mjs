@@ -47,6 +47,23 @@ async function cleanupDiscipleFlow(discipleId) {
   await adminClient.from('pathway_requests').delete().eq('disciple_id', discipleId);
 }
 
+// Phase 8's notification triggers fire throughout this file's flow
+// (pathway request insert/reject, graduation step advance/reject) — broad
+// cleanup by recipient rather than tracking every payload id.
+async function cleanupNotifications() {
+  for (const key of [
+    'disciple_4',
+    'disciple_5',
+    'disciple_6',
+    'builder_1',
+    'builder_2',
+    'lead_pastor',
+    'supervising_minister',
+  ]) {
+    await adminClient.from('notifications').delete().eq('user_id', userIds[key]);
+  }
+}
+
 before(async () => {
   userIds = await loadSeedUserIds();
 
@@ -60,6 +77,7 @@ before(async () => {
   await cleanupDiscipleFlow(userIds.disciple_4);
   await cleanupDiscipleFlow(userIds.disciple_5);
   await cleanupDiscipleFlow(userIds.disciple_6);
+  await cleanupNotifications();
 
   smClient = await signInAs('supervising_minister');
   lpClient = await signInAs('lead_pastor');
@@ -74,6 +92,7 @@ after(async () => {
   await cleanupDiscipleFlow(userIds.disciple_4);
   await cleanupDiscipleFlow(userIds.disciple_5);
   await cleanupDiscipleFlow(userIds.disciple_6);
+  await cleanupNotifications();
 });
 
 describe('Pathway approval queue — parallel, either order (the Phase 6 Gate)', () => {

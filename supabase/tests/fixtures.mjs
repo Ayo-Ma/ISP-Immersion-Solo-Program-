@@ -66,6 +66,12 @@ export async function setupFixtures() {
     .delete()
     .eq('primary_user_id', userIds.supervising_minister)
     .eq('reason', 'RLS test fixture');
+  await adminClient
+    .from('chat_messages')
+    .delete()
+    .eq('builder_id', userIds.builder_1)
+    .eq('disciple_id', userIds.disciple_1)
+    .eq('body', 'RLS test fixture message');
   // A crashed prior run can leave an orphaned enrollment behind (only one
   // active enrollment per disciple is allowed — enrollments_one_active_per_
   // disciple — so a leftover one blocks this run's insert below). Delete

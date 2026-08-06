@@ -105,26 +105,50 @@ Deno.serve(async (req) => {
     .single();
   if (updateError) return Response.json({ error: updateError.message }, { status: 500 });
 
-  let builderAlerted = false;
-  if (!passed && attempts === THREE_STRIKES_ATTEMPTS) {
-    const { data: pairing, error: pairingError } = await admin
-      .from('builder_disciple')
-      .select('builder_id')
-      .eq('disciple_id', enrollment.disciple_id)
-      .eq('status', 'active')
-      .maybeSingle();
-    if (pairingError) return Response.json({ error: pairingError.message }, { status: 500 });
+  const { data: pairing, error: pairingError } = await admin
+    .from('builder_disciple')
+    .select('builder_id')
+    .eq('disciple_id', enrollment.disciple_id)
+    .eq('status', 'active')
+    .maybeSingle();
+  if (pairingError) return Response.json({ error: pairingError.message }, { status: 500 });
 
-    if (pairing) {
-      const { error: notifyError } = await admin.from('notifications').insert({
-        user_id: pairing.builder_id,
-        event_type: 'test_three_failures',
-        payload: { module_progress_id: moduleProgressId, disciple_id: enrollment.disciple_id },
-        channel: 'realtime',
-      });
-      if (notifyError) return Response.json({ error: notifyError.message }, { status: 500 });
-      builderAlerted = true;
-    }
+  // PRD Notification Matrix: "Disciple passes/fails a test -> Disciple,
+  // Builder" — fires on every attempt, distinct from (and in addition to)
+  // the stronger 3-strikes escalation below.
+  const attemptNotifications = [
+    {
+      user_id: caller.id,
+      event_type: passed ? 'test_passed' : 'test_failed',
+      payload: { module_progress_id: moduleProgressId, attempts },
+      channel: 'realtime' as const,
+    },
+  ];
+  if (pairing) {
+    attemptNotifications.push({
+      user_id: pairing.builder_id,
+      event_type: passed ? 'test_passed' : 'test_failed',
+      payload: { module_progress_id: moduleProgressId, disciple_id: enrollment.disciple_id },
+      channel: 'realtime' as const,
+    });
+  }
+  const { error: attemptNotifyError } = await admin
+    .from('notifications')
+    .insert(attemptNotifications);
+  if (attemptNotifyError) {
+    return Response.json({ error: attemptNotifyError.message }, { status: 500 });
+  }
+
+  let builderAlerted = false;
+  if (!passed && attempts === THREE_STRIKES_ATTEMPTS && pairing) {
+    const { error: notifyError } = await admin.from('notifications').insert({
+      user_id: pairing.builder_id,
+      event_type: 'test_three_failures',
+      payload: { module_progress_id: moduleProgressId, disciple_id: enrollment.disciple_id },
+      channel: 'realtime',
+    });
+    if (notifyError) return Response.json({ error: notifyError.message }, { status: 500 });
+    builderAlerted = true;
   }
 
   log.info('module_progress.test_attempt_recorded', {
