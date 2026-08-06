@@ -31,10 +31,13 @@ import type { BuilderStackScreenProps } from '../../navigation/BuilderNavigator'
  * Builder does about a specific disciple," not independent flows with
  * their own navigation state.
  */
-export function DiscipleDetailScreen({ route }: BuilderStackScreenProps<'DiscipleDetail'>) {
+export function DiscipleDetailScreen({
+  route,
+  navigation,
+}: BuilderStackScreenProps<'DiscipleDetail'>) {
   const theme = useTheme();
   const { profile } = useAuth();
-  const { discipleId } = route.params;
+  const { discipleId, discipleName } = route.params;
 
   const [checklist, setChecklist] = useState<ChecklistForReview | null>(null);
   const [graduationRequest, setGraduationRequest] = useState<EligibleGraduationRequest | null>(
@@ -85,6 +88,14 @@ export function DiscipleDetailScreen({ route }: BuilderStackScreenProps<'Discipl
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.surfaceCanvas }}>
       <ScrollView contentContainerStyle={{ padding: theme.space.xl, gap: theme.space.lg }}>
+        <Button
+          variant="tertiary"
+          fullWidth
+          onPress={() => navigation.navigate('Chat', { discipleId, discipleName })}
+        >
+          Message {discipleName}
+        </Button>
+
         {checklist ? (
           <ChecklistReviewCard checklist={checklist} onReviewed={load} />
         ) : (

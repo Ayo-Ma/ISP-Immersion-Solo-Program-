@@ -37,3 +37,8 @@ export const selectCheckinTimeInputSchema = z.object({
   weeklyCheckinId: z.string().uuid(),
   chosenTime: z.string().datetime(),
 });
+
+export const clockOutPrayerInputSchema = z.object({
+  sessionId: z.string().uuid(),
+  checklistId: z.string().uuid(),
+});

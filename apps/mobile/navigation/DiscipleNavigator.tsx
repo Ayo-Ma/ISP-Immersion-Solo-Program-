@@ -20,6 +20,7 @@ import { TestScreen } from '../screens/disciple/TestScreen';
 import { ChecklistScreen } from '../screens/disciple/ChecklistScreen';
 import { GrowthScreen } from '../screens/disciple/GrowthScreen';
 import { WeeklyCheckinScreen } from '../screens/disciple/WeeklyCheckinScreen';
+import { ChatScreen } from '../screens/disciple/ChatScreen';
 
 export type DiscipleStackParamList = {
   Dashboard: undefined;
@@ -28,6 +29,7 @@ export type DiscipleStackParamList = {
   Checklist: undefined;
   Growth: undefined;
   Checkin: undefined;
+  Chat: undefined;
 };
 
 export type DiscipleStackScreenProps<T extends keyof DiscipleStackParamList> =
@@ -94,6 +96,7 @@ export function DiscipleNavigator() {
         component={WeeklyCheckinScreen}
         options={{ title: 'Weekly Check-in' }}
       />
+      <Stack.Screen name="Chat" component={ChatScreen} options={{ title: 'Chat' }} />
     </Stack.Navigator>
   );
 }

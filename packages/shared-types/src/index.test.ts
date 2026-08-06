@@ -4,6 +4,7 @@ import {
   reassignBuilderInputSchema,
   reviewChecklistInputSchema,
   selectCheckinTimeInputSchema,
+  clockOutPrayerInputSchema,
   userRoleSchema,
   userStatusSchema,
   uuidSchema,
@@ -147,6 +148,25 @@ describe('selectCheckinTimeInputSchema', () => {
       selectCheckinTimeInputSchema.safeParse({
         weeklyCheckinId: '123e4567-e89b-12d3-a456-426614174000',
         chosenTime: 'next tuesday',
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe('clockOutPrayerInputSchema', () => {
+  it('accepts a valid sessionId and checklistId', () => {
+    expect(
+      clockOutPrayerInputSchema.safeParse({
+        sessionId: '123e4567-e89b-12d3-a456-426614174000',
+        checklistId: '223e4567-e89b-12d3-a456-426614174000',
+      }).success,
+    ).toBe(true);
+  });
+
+  it('rejects a missing checklistId', () => {
+    expect(
+      clockOutPrayerInputSchema.safeParse({
+        sessionId: '123e4567-e89b-12d3-a456-426614174000',
       }).success,
     ).toBe(false);
   });

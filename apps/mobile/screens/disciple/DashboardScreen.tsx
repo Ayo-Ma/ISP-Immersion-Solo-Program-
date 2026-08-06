@@ -152,6 +152,9 @@ export function DashboardScreen({ navigation }: DiscipleStackScreenProps<'Dashbo
         <Button variant="tertiary" fullWidth onPress={() => navigation.navigate('Checkin')}>
           Weekly check-in
         </Button>
+        <Button variant="tertiary" fullWidth onPress={() => navigation.navigate('Chat')}>
+          Chat with your Builder
+        </Button>
       </ScrollView>
     </SafeAreaView>
   );

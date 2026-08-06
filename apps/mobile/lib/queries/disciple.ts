@@ -150,9 +150,16 @@ export async function createTodayChecklist(): Promise<DailyChecklistRow> {
   return data;
 }
 
+/**
+ * class_done/test_done only — prayer_done is no longer a raw self-report
+ * (Phase 7: locked to the clock-out-prayer Edge Function via a guard
+ * trigger, since a checkbox alone isn't a genuine enough signal for the
+ * prayer regimen, PRD Section E). A direct write here would be rejected
+ * by that trigger.
+ */
 export async function updateChecklistItem(
   id: string,
-  patch: Partial<Pick<DailyChecklistRow, 'class_done' | 'test_done' | 'prayer_done'>>,
+  patch: Partial<Pick<DailyChecklistRow, 'class_done' | 'test_done'>>,
 ): Promise<DailyChecklistRow> {
   const { data, error } = await supabase
     .from('daily_checklists')
@@ -249,6 +256,60 @@ export async function getMyActiveWeeklyCheckin(): Promise<WeeklyCheckinRow | nul
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export interface PrayerSessionRow {
+  id: string;
+  clock_in_at: string;
+  clock_out_at: string | null;
+}
+
+/**
+ * The disciple's assigned Builder — always exactly one active pairing at a
+ * time (Phase 1 unique index). Two plain queries rather than an embedded
+ * select: builder_disciple has three FKs to users (builder/disciple/
+ * assigned_by), so an embedded `users(...)` would need PostgREST's FK
+ * hint syntax, which is easy to get subtly wrong.
+ */
+export async function getMyActiveBuilder(): Promise<{ id: string; name: string } | null> {
+  const { data: pairing, error: pairingError } = await supabase
+    .from('builder_disciple')
+    .select('builder_id')
+    .eq('status', 'active')
+    .maybeSingle();
+  if (pairingError) throw pairingError;
+  if (!pairing) return null;
+
+  const { data: builder, error: builderError } = await supabase
+    .from('users')
+    .select('id, name')
+    .eq('id', pairing.builder_id)
+    .single();
+  if (builderError) throw builderError;
+  return builder;
+}
+
+/** An in-progress prayer session (clocked in, not yet out), if any. */
+export async function getMyActivePrayerSession(): Promise<PrayerSessionRow | null> {
+  const { data, error } = await supabase
+    .from('prayer_sessions')
+    .select('id, clock_in_at, clock_out_at')
+    .is('clock_out_at', null)
+    .order('clock_in_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function startPrayerSession(): Promise<PrayerSessionRow> {
+  const { data, error } = await supabase
+    .from('prayer_sessions')
+    .insert({})
+    .select('id, clock_in_at, clock_out_at')
+    .single();
   if (error) throw error;
   return data;
 }

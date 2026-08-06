@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView, ScrollView, Text, View } from 'react-native';
 
 import { useTheme } from '../../theme';
@@ -14,6 +15,7 @@ import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
 import { LoadingState } from '../../components/LoadingState';
 import { ErrorState } from '../../components/ErrorState';
+import type { DiscipleStackScreenProps } from '../../navigation/DiscipleNavigator';
 
 const STATUS_TONE: Record<
   DailyChecklistRow['status'],
@@ -33,38 +35,47 @@ const STATUS_LABEL: Record<DailyChecklistRow['status'], string> = {
 
 /**
  * PRD Section C.3: explicit status states Submitted -> Pending Review ->
- * Approved / Needs Redo, never silence while the disciple waits. Prayer
- * regimen is a self-report, same trust model the design rulebook uses
- * throughout (a Builder can't actually verify sincerity remotely) — this
- * checkbox is "I did this," not a claim anyone is fact-checking.
+ * Approved / Needs Redo, never silence while the disciple waits.
+ * class_done/test_done stay simple self-report toggles. prayer_done is
+ * read-only here as of Phase 7 — it's set only by actually clocking
+ * in/out of a prayer session in Chat (PRD Section E: a bare checkbox
+ * wasn't a genuine enough signal), so this screen links there instead of
+ * offering a toggle a guard trigger would just reject.
  */
-export function ChecklistScreen() {
+export function ChecklistScreen({ navigation }: DiscipleStackScreenProps<'Checklist'>) {
   const theme = useTheme();
   const [checklist, setChecklist] = useState<DailyChecklistRow | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setError(null);
-    setChecklist(null);
     try {
       const existing = await getTodayChecklist();
       setChecklist(existing ?? (await createTodayChecklist()));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.');
     }
-  };
+  }, []);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
+
+  // Re-check on focus — coming back from Chat after clocking out of
+  // prayer should reflect prayer_done flipping to true, not a stale read.
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
 
   if (error) return <ErrorState onRetry={load} />;
   if (!checklist) return <LoadingState />;
 
   const editable = checklist.status === 'draft';
 
-  const toggle = async (key: 'class_done' | 'test_done' | 'prayer_done') => {
+  const toggle = async (key: 'class_done' | 'test_done') => {
     if (!editable || busy) return;
     setBusy(true);
     try {
@@ -106,7 +117,6 @@ export function ChecklistScreen() {
             [
               ['class_done', 'Class attended'],
               ['test_done', 'Test taken'],
-              ['prayer_done', 'Prayer regimen'],
             ] as const
           ).map(([key, label]) => (
             <Button
@@ -119,6 +129,19 @@ export function ChecklistScreen() {
               {(checklist[key] ? '✓ ' : '') + label}
             </Button>
           ))}
+
+          <Card eyebrow="Prayer regimen" title={checklist.prayer_done ? 'Done' : 'Not yet'}>
+            <Badge tone={checklist.prayer_done ? 'success' : 'neutral'}>
+              {checklist.prayer_done ? 'Clocked out today' : 'Clock in from Chat to log it'}
+            </Badge>
+            {!checklist.prayer_done ? (
+              <View style={{ marginTop: theme.space.sm }}>
+                <Button variant="secondary" fullWidth onPress={() => navigation.navigate('Chat')}>
+                  Go to Chat
+                </Button>
+              </View>
+            ) : null}
+          </Card>
         </View>
 
         {editable ? (

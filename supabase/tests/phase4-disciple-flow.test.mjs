@@ -61,6 +61,7 @@ before(async () => {
     .delete()
     .eq('disciple_id', userIds.disciple_3)
     .eq('date', new Date().toISOString().slice(0, 10));
+  await adminClient.from('prayer_sessions').delete().eq('disciple_id', userIds.disciple_3);
 
   discipleClient = await signInAs('disciple_3');
   const {
@@ -86,6 +87,7 @@ after(async () => {
     .delete()
     .eq('disciple_id', userIds.disciple_3)
     .eq('date', new Date().toISOString().slice(0, 10));
+  await adminClient.from('prayer_sessions').delete().eq('disciple_id', userIds.disciple_3);
 });
 
 describe('Registration -> pathway status (RegistrationScreen / PathwayStatusScreen data layer)', () => {
@@ -256,15 +258,46 @@ describe('Daily checklist full lifecycle (ChecklistScreen data layer)', () => {
     checklistId = data.id;
   });
 
-  it('toggles each item while still draft', async () => {
+  it('toggles class/test while still draft', async () => {
     const { data, error } = await discipleClient
       .from('daily_checklists')
-      .update({ class_done: true, test_done: true, prayer_done: true })
+      .update({ class_done: true, test_done: true })
       .eq('id', checklistId)
-      .select('class_done, test_done, prayer_done')
+      .select('class_done, test_done')
       .single();
     assert.equal(error, null);
-    assert.ok(data.class_done && data.test_done && data.prayer_done);
+    assert.ok(data.class_done && data.test_done);
+  });
+
+  it('prayer_done cannot be set directly — only via clock-out-prayer (Phase 7)', async () => {
+    const { error } = await discipleClient
+      .from('daily_checklists')
+      .update({ prayer_done: true })
+      .eq('id', checklistId);
+    assert.ok(error, 'expected the guard trigger to reject this');
+  });
+
+  it('clocking in then out of a prayer session sets prayer_done via the Edge Function', async () => {
+    const { data: session, error: sessionError } = await discipleClient
+      .from('prayer_sessions')
+      .insert({})
+      .select('id')
+      .single();
+    assert.equal(sessionError, null);
+
+    const res = await callFunction('clock-out-prayer', discipleToken, {
+      sessionId: session.id,
+      checklistId,
+    });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.equal(res.body.checklistPrayerDone, true);
+
+    const { data } = await discipleClient
+      .from('daily_checklists')
+      .select('prayer_done')
+      .eq('id', checklistId)
+      .single();
+    assert.equal(data.prayer_done, true);
   });
 
   it('submitting normalizes straight to pending_review (Phase 2 trigger)', async () => {

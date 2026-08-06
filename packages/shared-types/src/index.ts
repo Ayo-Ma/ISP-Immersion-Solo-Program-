@@ -166,3 +166,18 @@ export const selectCheckinTimeOutputSchema = z.object({
   scheduledAt: z.string().datetime(),
 });
 export type SelectCheckinTimeOutput = z.infer<typeof selectCheckinTimeOutputSchema>;
+
+// ---- clock-out-prayer ------------------------------------------------
+
+export const clockOutPrayerInputSchema = z.object({
+  sessionId: uuidSchema,
+  checklistId: uuidSchema,
+});
+export type ClockOutPrayerInput = z.infer<typeof clockOutPrayerInputSchema>;
+
+export const clockOutPrayerOutputSchema = z.object({
+  sessionId: uuidSchema,
+  clockOutAt: z.string().datetime(),
+  checklistPrayerDone: z.boolean(),
+});
+export type ClockOutPrayerOutput = z.infer<typeof clockOutPrayerOutputSchema>;

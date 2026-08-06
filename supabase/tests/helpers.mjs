@@ -50,8 +50,10 @@ export const adminClient = createClient(SUPABASE_URL, SECRET_KEY, {
 // Auth API and the Management API, always transient, always succeeds on
 // retry) — retrying a couple of times here means a real, reproducible
 // failure still surfaces immediately, instead of every test file needing
-// a human to notice "fetch failed" and re-run it by hand.
-async function withRetry(fn, attempts = 5) {
+// a human to notice "fetch failed" and re-run it by hand. Exported so
+// other test files can wrap their own flaky-prone calls the same way
+// (see phase7-chat-prayer-flow.test.mjs).
+export async function withRetry(fn, attempts = 5) {
   let lastError;
   for (let i = 0; i < attempts; i++) {
     try {

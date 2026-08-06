@@ -9,6 +9,8 @@ import type {
   SelectCheckinTimeOutput,
   ReassignBuilderInput,
   ReassignBuilderOutput,
+  ClockOutPrayerInput,
+  ClockOutPrayerOutput,
 } from '@isp-app/shared-types';
 
 import { supabase } from './supabase';
@@ -72,4 +74,8 @@ export function selectCheckinTime(input: SelectCheckinTimeInput): Promise<Select
 
 export function reassignBuilder(input: ReassignBuilderInput): Promise<ReassignBuilderOutput> {
   return callEdgeFunction('reassign-builder', input);
+}
+
+export function clockOutPrayer(input: ClockOutPrayerInput): Promise<ClockOutPrayerOutput> {
+  return callEdgeFunction('clock-out-prayer', input);
 }

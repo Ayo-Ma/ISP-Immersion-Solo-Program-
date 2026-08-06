@@ -5,10 +5,12 @@ import {
 
 import { BuilderDashboardScreen } from '../screens/builder/BuilderDashboardScreen';
 import { DiscipleDetailScreen } from '../screens/builder/DiscipleDetailScreen';
+import { ChatScreen } from '../screens/builder/ChatScreen';
 
 export type BuilderStackParamList = {
   BuilderDashboard: undefined;
   DiscipleDetail: { discipleId: string; discipleName: string };
+  Chat: { discipleId: string; discipleName: string };
 };
 
 export type BuilderStackScreenProps<T extends keyof BuilderStackParamList> = NativeStackScreenProps<
@@ -35,6 +37,11 @@ export function BuilderNavigator() {
       <Stack.Screen
         name="DiscipleDetail"
         component={DiscipleDetailScreen}
+        options={({ route }) => ({ title: route.params.discipleName })}
+      />
+      <Stack.Screen
+        name="Chat"
+        component={ChatScreen}
         options={({ route }) => ({ title: route.params.discipleName })}
       />
     </Stack.Navigator>
